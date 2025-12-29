@@ -1,11 +1,20 @@
-import { useEffect, useRef } from "react"
+import {useEffect, useRef, useState} from "react"
 import "./App.css"
-import {placePoint, type Point, clearCanvas, animateZTranslation, stopAnimation} from "./utils"
+import {
+    placePoint,
+    clearCanvas,
+    animate,
+    screen,
+    stopAnimation,
+    type DimensionPoint,
+    project
+} from "./utils"
 
 function App() {
+
+    const [zIndex, setZIndex] = useState(-0.5)
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
-    const ctxRef = useRef<CanvasRenderingContext2D | null>(null)
-    const vs = [
+    let vs = [
         {x: -1, y: 0.5, z: 0.5},
         {x: 1, y: 0.5, z: 0.5},
         {x: 1, y: -0.5, z: 0.5},
@@ -19,19 +28,29 @@ function App() {
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current
-        const ctx = ctxRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
         if (!canvas || !ctx) return
 
         const rect = canvas.getBoundingClientRect()
         const scaleX = canvas.width / rect.width
         const scaleY = canvas.height / rect.height
+        const px = (e.clientX - rect.left) * scaleX
+        const py = (e.clientY - rect.top) * scaleY
+        const ndcX = (px / canvas.width) * 2 - 1
+        const ndcY = -((py / canvas.height) * 2 - 1)
 
-        const point: Point = {
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
+        const point3D: DimensionPoint = {
+            x: ndcX * zIndex,
+            y: ndcY * zIndex,
+            z: zIndex,
         }
 
-        placePoint(point, ctx)
+        const projected = project(point3D)
+        const screenPt = screen(projected, canvas.width, canvas.height)
+        placePoint(screenPt, ctx)
+        vs.push(point3D)
     }
 
     const animateZ = () => {
@@ -39,7 +58,7 @@ function App() {
         if (!canvas) return
         const ctx = canvas.getContext("2d")
         if (!ctx) return
-        animateZTranslation(vs, ctx);
+        animate(vs, ctx);
 
     }
 
@@ -49,7 +68,8 @@ function App() {
         const ctx = canvas.getContext("2d")
         if (!ctx) return
         stopAnimation()
-         clearCanvas(ctx)
+        vs = [];
+        clearCanvas(ctx)
     }
 
     useEffect(() => {

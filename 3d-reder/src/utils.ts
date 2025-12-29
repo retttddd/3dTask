@@ -40,30 +40,39 @@ export function clearCanvas(ctx: CanvasRenderingContext2D) {
 }
 
 let dz = 0
+let angle = 0
 let animationIdZTranslation: number | null = null
 
-export function animateZTranslation(points: DimensionPoint[], ctx: CanvasRenderingContext2D) {
+const translateZ = (p: DimensionPoint, deltaZ:number) => ({...p, z: p.z + deltaZ})
+
+const rotate= (p: DimensionPoint, angleRotation: number)=> {
+    const c = Math.cos(angleRotation);
+    const s = Math.sin(angleRotation);
+    return {
+        x: p.x*c-p.z*s,
+        y: p.y,
+        z: p.x*s+p.z*c,
+    }
+    };
+
+export function animate(points: DimensionPoint[], ctx: CanvasRenderingContext2D) {
     dz += 1 * DELTA_TIME
+    angle +=  1 * DELTA_TIME
     clearCanvas(ctx)
 
     for (const d of points) {
-        const projected = project({
-            x: d.x,
-            y: d.y,
-            z: d.z + dz
-        })
-
-        const screenPoint = screen(projected, ctx.canvas.width, ctx.canvas.height)
-        placePoint(screenPoint, ctx)
+        placePoint(screen(project(rotate(d, angle)), ctx.canvas.width, ctx.canvas.height), ctx)
     }
 
 
-    animationIdZTranslation = requestAnimationFrame(() => animateZTranslation(points, ctx))
+    animationIdZTranslation = requestAnimationFrame(() => animate(points, ctx))
 }
 
 // Stop the animation
 export function stopAnimation() {
     if (animationIdZTranslation != null) {
         cancelAnimationFrame(animationIdZTranslation)
+        angle = 0;
+        dz = 0;
     }
 }
