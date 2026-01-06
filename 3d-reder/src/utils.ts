@@ -61,7 +61,7 @@ export function animate(points: DimensionPoint[], ctx: CanvasRenderingContext2D)
     clearCanvas(ctx)
 
     for (const d of points) {
-        placePoint(screen(project(rotate(d, angle)), ctx.canvas.width, ctx.canvas.height), ctx)
+        placePoint(screen(project(translateZ(rotate(d, angle), dz)), ctx.canvas.width, ctx.canvas.height), ctx)
     }
 
 

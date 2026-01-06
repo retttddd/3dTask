@@ -70,6 +70,7 @@ function App() {
         stopAnimation()
         vs = [];
         clearCanvas(ctx)
+        window.location.reload()
     }
 
     useEffect(() => {
@@ -86,30 +87,102 @@ function App() {
 
 
     return (
-        <>
-            <header>
-                <h1>Example table</h1>
+        <div style={{
+            margin: 0,
+            padding: 0,
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden',
+            background: '#fafafa',
+        }}>
+            <header style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                padding: '24px 32px',
+                background: '#1e1f22',
+                zIndex: 100
+            }}>
+                <h1 style={{
+                    margin: 0,
+                    fontSize: '20px',
+                    fontWeight: 400,
+                    color: '#999',
+                    letterSpacing: '0.5px'
+                }}>
+                    3D Playground
+                </h1>
             </header>
-
-            <section>
-                <button onClick={() => clearCanvasWrapper()}>
+            <div style={{
+                position: 'absolute',
+                top: '80px',
+                left: '32px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                zIndex: 100
+            }}>
+                <button
+                    onClick={() => clearCanvasWrapper()}
+                    style={{
+                        padding: '8px 16px',
+                        fontSize: '16px',
+                        fontWeight: 400,
+                        color: '#666',
+                        background: '#fff',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f5f5f5';
+                        e.currentTarget.style.borderColor = '#ccc';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#fff';
+                        e.currentTarget.style.borderColor = '#e0e0e0';
+                    }}
+                >
                     Clear
                 </button>
-                <button onClick={() => animateZ()}>
-                    animate z translation
-                </button>
-
-                <canvas
-                    ref={canvasRef}
-                    onClick={handleCanvasClick}
+                <button
+                    onClick={() => animateZ()}
                     style={{
-                        width: "100%",
-                        height: "100vh",
-                        border: "1px solid red"
+                        padding: '8px 16px',
+                        fontSize: '16px',
+                        fontWeight: 400,
+                        color: '#666',
+                        background: '#fff',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
                     }}
-                />
-            </section>
-        </>
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f5f5f5';
+                        e.currentTarget.style.borderColor = '#ccc';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#fff';
+                        e.currentTarget.style.borderColor = '#e0e0e0';
+                    }}
+                >
+                    Animate
+                </button>
+            </div>
+
+            <canvas
+                ref={canvasRef}
+                onClick={handleCanvasClick}
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'crosshair'
+                }}
+            />
+        </div>
     )
 }
 
