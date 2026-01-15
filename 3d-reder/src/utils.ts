@@ -1,4 +1,5 @@
 import {DELTA_TIME, DOT_SIZE} from "./constants"
+import React from "react";
 
 export type Point = {
     x: number
@@ -42,6 +43,7 @@ export function clearCanvas(ctx: CanvasRenderingContext2D) {
 let dz = 0
 let angle = 0
 let animationIdZTranslation: number | null = null
+let cameraZ = 0
 
 const translateZ = (p: DimensionPoint, deltaZ:number) => ({...p, z: p.z + deltaZ})
 
@@ -51,21 +53,22 @@ const rotate= (p: DimensionPoint, angleRotation: number)=> {
     return {
         x: p.x*c-p.z*s,
         y: p.y,
-        z: p.x*s+p.z*c,
+        z: p.x*s+p.z*c - cameraZ,
     }
     };
 
-export function animate(points: DimensionPoint[], ctx: CanvasRenderingContext2D) {
+export function animate(points: DimensionPoint[], ctx: CanvasRenderingContext2D, movingZRef: React.MutableRefObject<number>) {
     dz += 1 * DELTA_TIME
     angle +=  1 * DELTA_TIME
+    cameraZ += movingZRef.current * DELTA_TIME;
     clearCanvas(ctx)
 
     for (const d of points) {
-        placePoint(screen(project(translateZ(rotate(d, angle), dz)), ctx.canvas.width, ctx.canvas.height), ctx)
+        placePoint(screen(project(rotate(d, angle)), ctx.canvas.width, ctx.canvas.height), ctx)
     }
 
 
-    animationIdZTranslation = requestAnimationFrame(() => animate(points, ctx))
+    animationIdZTranslation = requestAnimationFrame(() => animate(points, ctx, movingZRef))
 }
 
 // Stop the animation

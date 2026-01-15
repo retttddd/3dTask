@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react"
+import {useCallback, useEffect, useRef, useState} from "react"
 import "./App.css"
 import {
     placePoint,
@@ -9,10 +9,12 @@ import {
     type DimensionPoint,
     project
 } from "./utils"
+import Slider from "./components /Slider.tsx";
 
 function App() {
 
     const [zIndex, setZIndex] = useState(-0.5)
+    const [movingZ, setMovingZ] = useState(0)
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
     let vs = [
         {x: -1, y: 0.5, z: 0.5},
@@ -53,15 +55,20 @@ function App() {
         vs.push(point3D)
     }
 
-    const animateZ = () => {
-        const canvas = canvasRef.current
-        if (!canvas) return
-        const ctx = canvas.getContext("2d")
-        if (!ctx) return
-        animate(vs, ctx);
+    const movingZRef = useRef<number>(0);
 
-    }
+    useEffect(() => {
+        movingZRef.current = movingZ;
+    }, [movingZ]);
 
+    const animateZ = useCallback(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        animate(vs, ctx, movingZRef);
+    }, [movingZ]);
     const clearCanvasWrapper = () => {
         const canvas = canvasRef.current
         if (!canvas) return
@@ -84,13 +91,11 @@ function App() {
         if (!ctx) return
     }, [])
 
-
-
     return (
         <div style={{
             margin: 0,
             padding: 0,
-            width: '100vw',
+            width: '75vw',
             height: '100vh',
             overflow: 'hidden',
             background: '#fafafa',
@@ -171,6 +176,7 @@ function App() {
                 >
                     Animate
                 </button>
+                <Slider value={movingZ} min={-10} max={10} onChange={setMovingZ} />
             </div>
 
             <canvas
