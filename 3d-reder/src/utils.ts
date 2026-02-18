@@ -1,4 +1,4 @@
-import {DELTA_TIME, DOT_SIZE} from "./constants"
+import {DOT_SIZE} from "./constants"
 import React from "react";
 
 export type Point = {
@@ -10,6 +10,23 @@ export type DimensionPoint = {
     x: number
     y: number
     z: number
+}
+
+const FOREGROUND = "#50FF50"
+const LINE_WIDTH = 3
+const BASE_DEPTH = 2
+const NEAR_CLIP = 0.05
+const ZOOM_SENSITIVITY = 0.2
+const CONNECTION_DISTANCE = 0.2
+const CONNECTION_DISTANCE_SQ = CONNECTION_DISTANCE * CONNECTION_DISTANCE
+
+export function line(p1: Point, p2: Point, ctx: CanvasRenderingContext2D) {
+    ctx.lineWidth = LINE_WIDTH
+    ctx.strokeStyle = FOREGROUND
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
 }
 
 export function screen(p: Point, width: number, height: number): Point {
@@ -27,7 +44,7 @@ export function project(p: DimensionPoint): Point {
 }
 
 export function placePoint(p: Point, ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "green"
+    ctx.fillStyle = FOREGROUND
     ctx.fillRect(
         p.x - DOT_SIZE / 2,
         p.y - DOT_SIZE / 2,
@@ -37,45 +54,80 @@ export function placePoint(p: Point, ctx: CanvasRenderingContext2D) {
 }
 
 export function clearCanvas(ctx: CanvasRenderingContext2D) {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    ctx.fillStyle = '#000000'
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 }
 
-let dz = 0
 let angle = 0
+let angleXY = 0
 let animationIdZTranslation: number | null = null
-let cameraZ = 0
 
-const translateZ = (p: DimensionPoint, deltaZ:number) => ({...p, z: p.z + deltaZ})
+const translateZ = (p: DimensionPoint, dz: number): DimensionPoint => ({...p, z: p.z + dz})
 
-const rotate= (p: DimensionPoint, angleRotation: number)=> {
+const rotateXZ = (p: DimensionPoint, angleRotation: number): DimensionPoint => {
     const c = Math.cos(angleRotation);
     const s = Math.sin(angleRotation);
     return {
-        x: p.x*c-p.z*s,
+        x: p.x * c - p.z * s,
         y: p.y,
-        z: p.x*s+p.z*c - cameraZ,
+        z: p.x * s + p.z * c,
     }
-    };
-
-export function animate(points: DimensionPoint[], ctx: CanvasRenderingContext2D, movingZRef: React.MutableRefObject<number>) {
-    dz += 1 * DELTA_TIME
-    angle +=  1 * DELTA_TIME
-    cameraZ += movingZRef.current * DELTA_TIME;
-    clearCanvas(ctx)
-
-    for (const d of points) {
-        placePoint(screen(project(rotate(d, angle)), ctx.canvas.width, ctx.canvas.height), ctx)
-    }
-
-
-    animationIdZTranslation = requestAnimationFrame(() => animate(points, ctx, movingZRef))
 }
 
-// Stop the animation
+const rotateXY = (p: DimensionPoint, angleRotation: number): DimensionPoint => {
+    const c = Math.cos(angleRotation);
+    const s = Math.sin(angleRotation);
+    return {
+        x: p.x,
+        y: p.y * c - p.z * s,
+        z: p.y * s + p.z * c,
+    }
+}
+
+export function animate(
+    points: DimensionPoint[],
+    ctx: CanvasRenderingContext2D,
+    movingZRef: React.MutableRefObject<number>,
+    rotationAngleRef: React.MutableRefObject<number>,
+    rotationAngleXYRef: React.MutableRefObject<number>
+) {
+    angle = rotationAngleRef.current
+    angleXY = rotationAngleXYRef.current
+    const movingZ = movingZRef.current
+    const dz = BASE_DEPTH - movingZ * ZOOM_SENSITIVITY
+    clearCanvas(ctx)
+
+    const visiblePoints: { world: DimensionPoint; screen: Point }[] = []
+    for (const d of points) {
+        const transformed = translateZ(rotateXY(rotateXZ(d, angle), angleXY), dz)
+        if (transformed.z <= NEAR_CLIP) continue
+        const projected = screen(project(transformed), ctx.canvas.width, ctx.canvas.height)
+        visiblePoints.push({ world: transformed, screen: projected })
+        placePoint(projected, ctx)
+    }
+
+    for (let i = 0; i < visiblePoints.length; i += 1) {
+        const a = visiblePoints[i]
+        for (let j = i + 1; j < visiblePoints.length; j += 1) {
+            const b = visiblePoints[j]
+            const dx = a.world.x - b.world.x
+            const dy = a.world.y - b.world.y
+            const dz = a.world.z - b.world.z
+            const distanceSq = dx * dx + dy * dy + dz * dz
+            if (distanceSq <= CONNECTION_DISTANCE_SQ) {
+                line(a.screen, b.screen, ctx)
+            }
+        }
+    }
+
+
+    animationIdZTranslation = requestAnimationFrame(() => animate(points, ctx, movingZRef, rotationAngleRef, rotationAngleXYRef))
+}
+
 export function stopAnimation() {
     if (animationIdZTranslation != null) {
         cancelAnimationFrame(animationIdZTranslation)
         angle = 0;
-        dz = 0;
+        angleXY = 0;
     }
 }
