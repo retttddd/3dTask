@@ -6,12 +6,13 @@ import {
     stopAnimation,
 } from "./utils"
 import Slider from "./components /Slider.tsx";
-
-const ZOOM_MIN = -10
-const ZOOM_MAX = 10
-const WHEEL_ZOOM_SENSITIVITY = 0.01
-const ROTATION_MIN = -Math.PI
-const ROTATION_MAX = Math.PI
+import {
+    ROTATION_MAX,
+    ROTATION_MIN,
+    WHEEL_ZOOM_SENSITIVITY,
+    ZOOM_MAX,
+    ZOOM_MIN,
+} from "./constants"
 
 function App() {
 
@@ -19,8 +20,9 @@ function App() {
     const [rotationAngle, setRotationAngle] = useState(0)
     const [rotationAngleXY, setRotationAngleXY] = useState(0)
     const [isDisabled, setIsDisabled] = useState(false)
+    const [isDragging, setIsDragging] = useState(false)
 
-    const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
     const vs = [
       {x: -0.086914, y: 0.277547, z: 0.400041},
       {x: -0.069555, y: 0.329698, z: 0.376422},
@@ -373,7 +375,32 @@ function App() {
     setIsDisabled(true)
     }, [movingZ, rotationAngle, rotationAngleXY]);
 
-    const handleCanvasWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+    const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+        e.preventDefault()
+        setIsDragging(true)
+        e.currentTarget.setPointerCapture(e.pointerId)
+    }, [])
+
+    const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+        if (!isDragging) return
+        e.preventDefault()
+        setRotationAngle((prev) => {
+            const next = prev + e.movementX * 0.01
+            return  next
+        })
+        setRotationAngleXY((prev) => {
+            const next = prev + e.movementY * 0.01
+            return  next
+        })
+    }, [isDragging])
+
+    const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+        if (!isDragging) return
+        setIsDragging(false)
+        e.currentTarget.releasePointerCapture(e.pointerId)
+    }, [isDragging])
+
+  const handleCanvasWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault()
         setMovingZ((prev) => {
             const next = prev - e.deltaY * WHEEL_ZOOM_SENSITIVITY
@@ -393,14 +420,24 @@ function App() {
     }
 
     useEffect(() => {
-        const canvas = canvasRef.current
+      const canvas = canvasRef.current
         if (!canvas) return
+
+        const previousHtmlOverflow = document.documentElement.style.overflow
+        const previousBodyOverflow = document.body.style.overflow
+        document.documentElement.style.overflow = "hidden"
+        document.body.style.overflow = "hidden"
 
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
 
         const ctx = canvas.getContext("2d")
         if (!ctx) return
+
+        return () => {
+            document.documentElement.style.overflow = previousHtmlOverflow
+            document.body.style.overflow = previousBodyOverflow
+        }
     }, [])
 
     return (
@@ -481,10 +518,14 @@ function App() {
             <canvas
                 ref={canvasRef}
                 onWheel={handleCanvasWheel}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerUp}
                 style={{
-                    width: '100%',
-                    height: '100%',
-                    cursor: 'crosshair'
+                    width: '90%',
+                    height: '90%',
+                    cursor: isDragging ? 'grabbing' : 'grab'
                 }}
             />
         </div>
